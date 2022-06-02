@@ -7,11 +7,23 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.pusketiri.simpleiot.databinding.FragmentFirstBinding;
+import com.amazonaws.auth.CognitoCachingCredentialsProvider;
+import com.amazonaws.mobileconnectors.iot.AWSIotMqttClientStatusCallback;
+import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
+import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
+import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
+import com.amazonaws.regions.Regions;
+
+import com.pusketiri.simpleiot.databinding.FragmentMainBinding;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -29,7 +41,32 @@ public class MainFragment extends Fragment {
     private String mParam1;
     private String mParam2;
 
-    private MainFragmentBinding binding;
+    private String[] topics = {
+            "temperature/reading",
+            "moisture/reading",
+            "cooler/switch",
+            "cooler/reading"
+    };
+
+    // Customer specific IoT endpoint
+    // AWS Iot CLI describe-endpoint call returns: XXXXXXXXXX.iot.<region>.amazonaws.com,
+    private static final String CUSTOMER_SPECIFIC_ENDPOINT = "a20giyqb0hvu11-ats.iot.eu-central-1.amazonaws.com";
+
+    private static final String LOG_TAG = "Ivan";
+
+    // Cognito pool ID. For this app, pool needs to be unauthenticated pool with
+    // AWS IoT permissions.
+    private static final String COGNITO_POOL_ID = "eu-central-1:613530a9-0cbf-4ffe-946a-f8942192f157";
+
+    // Region of AWS IoT
+    private static final Regions MY_REGION = Regions.EU_CENTRAL_1;
+
+    private FragmentMainBinding binding;
+
+    AWSIotMqttManager mqttManager;
+    String clientId;
+
+    CognitoCachingCredentialsProvider credentialsProvider;
 
     public MainFragment() {
         // Required empty public constructor
@@ -60,13 +97,70 @@ public class MainFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+
+        // MQTT client IDs are required to be unique per AWS IoT account.
+        // This UUID is "practically unique" but does not _guarantee_
+        // uniqueness.
+        clientId = UUID.randomUUID().toString();
+        //tvClientId.setText(clientId);
+
+        // Initialize the AWS Cognito credentials provider
+        credentialsProvider = new CognitoCachingCredentialsProvider(
+                requireActivity(), // context
+                COGNITO_POOL_ID, // Identity Pool ID
+                MY_REGION // Region
+        );
+
+        // MQTT Client
+        mqttManager = new AWSIotMqttManager(clientId, CUSTOMER_SPECIFIC_ENDPOINT);
+
+        try {
+            mqttManager.connect(credentialsProvider, new AWSIotMqttClientStatusCallback() {
+                @Override
+                public void onStatusChanged(final AWSIotMqttClientStatus status,
+                                            final Throwable throwable) {
+                    Log.d(LOG_TAG, "Status = " + String.valueOf(status));
+
+                    requireActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (status == AWSIotMqttClientStatus.Connecting) {
+                                binding.mqttStatusMessage.setText("Connecting...");
+
+                            } else if (status == AWSIotMqttClientStatus.Connected) {
+                                binding.mqttStatusMessage.setText("Connected");
+
+                            } else if (status == AWSIotMqttClientStatus.Reconnecting) {
+                                if (throwable != null) {
+                                    Log.e(LOG_TAG, "Connection error.", throwable);
+                                }
+                                binding.mqttStatusMessage.setText("Reconnecting");
+                            } else if (status == AWSIotMqttClientStatus.ConnectionLost) {
+                                if (throwable != null) {
+                                    Log.e(LOG_TAG, "Connection error.", throwable);
+                                    throwable.printStackTrace();
+                                }
+                                binding.mqttStatusMessage.setText("Disconnected");
+                            } else {
+                                binding.mqttStatusMessage.setText("Disconnected");
+
+                            }
+                        }
+                    });
+                }
+            });
+        } catch (final Exception e) {
+            Log.e(LOG_TAG, "Connection error.", e);
+            binding.mqttStatusMessage.setText("Error! " + e.getMessage());
+        }
+
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        binding = FragmentFirstBinding.inflate(inflater, container, false);
+        binding = FragmentMainBinding.inflate(inflater, container, false);
         binding.getRoot().getRootView().setBackgroundColor(Color.WHITE);
         return binding.getRoot();
         //return inflater.inflate(R.layout.fragment_main, container, false);
@@ -81,5 +175,43 @@ public class MainFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        try {
+            mqttManager.subscribeToTopic(topics[0], AWSIotMqttQos.QOS0,
+                    new AWSIotMqttNewMessageCallback() {
+                        @Override
+                        public void onMessageArrived(final String topic, final byte[] data) {
+                            requireActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        String message = new String(data, "UTF-8");
+                                        Log.d(LOG_TAG, "Message arrived:");
+                                        Log.d(LOG_TAG, "   Topic: " + topic);
+                                        Log.d(LOG_TAG, " Message: " + message);
+
+                                        binding.receivedMessages.setText(message);
+
+                                    } catch (UnsupportedEncodingException e) {
+                                        Log.e(LOG_TAG, "Message encoding error.", e);
+                                    }
+                                }
+                            });
+                        }
+                    });
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Subscription error.", e);
+        }
+
+        binding.buttonPublish.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    mqttManager.publishString("HELLLLLLOOOOOO", topics[2], AWSIotMqttQos.QOS0);
+                } catch (Exception e) {
+                    Log.e(LOG_TAG, "Publish error.", e);
+                }
+            }
+        });
     }
 }
