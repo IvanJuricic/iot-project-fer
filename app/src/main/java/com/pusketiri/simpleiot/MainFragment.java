@@ -6,6 +6,7 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.fragment.NavHostFragment;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -153,7 +154,6 @@ public class MainFragment extends Fragment {
             Log.e(LOG_TAG, "Connection error.", e);
             binding.mqttStatusMessage.setText("Error! " + e.getMessage());
         }
-
     }
 
     @Override
@@ -162,6 +162,7 @@ public class MainFragment extends Fragment {
         // Inflate the layout for this fragment
         binding = FragmentMainBinding.inflate(inflater, container, false);
         binding.getRoot().getRootView().setBackgroundColor(Color.WHITE);
+
         return binding.getRoot();
         //return inflater.inflate(R.layout.fragment_main, container, false);
     }
@@ -169,39 +170,43 @@ public class MainFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        mqttManager.disconnect();
         binding = null;
     }
+
+    AWSIotMqttNewMessageCallback new_message_callback = new AWSIotMqttNewMessageCallback() {
+        @Override
+        public void onMessageArrived(final String topic, final byte[] data) {
+            requireActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String message = new String(data, "UTF-8");
+                        Log.d(LOG_TAG, "Message arrived:");
+                        Log.d(LOG_TAG, "   Topic: " + topic);
+                        Log.d(LOG_TAG, " Message: " + message);
+
+                        binding.receivedMessages.setText(message);
+
+                    } catch (UnsupportedEncodingException e) {
+                        Log.e(LOG_TAG, "Message encoding error.", e);
+                    }
+                }
+            });
+        }
+    };
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        try {
-            mqttManager.subscribeToTopic(topics[0], AWSIotMqttQos.QOS0,
-                    new AWSIotMqttNewMessageCallback() {
-                        @Override
-                        public void onMessageArrived(final String topic, final byte[] data) {
-                            requireActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        String message = new String(data, "UTF-8");
-                                        Log.d(LOG_TAG, "Message arrived:");
-                                        Log.d(LOG_TAG, "   Topic: " + topic);
-                                        Log.d(LOG_TAG, " Message: " + message);
-
-                                        binding.receivedMessages.setText(message);
-
-                                    } catch (UnsupportedEncodingException e) {
-                                        Log.e(LOG_TAG, "Message encoding error.", e);
-                                    }
-                                }
-                            });
-                        }
-                    });
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Subscription error.", e);
-        }
+        binding.buttonNext.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                NavHostFragment.findNavController(MainFragment.this)
+                        .navigate(R.id.action_mainFragment_to_FirstFragment);
+            }
+        });
 
         binding.buttonPublish.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -210,6 +215,22 @@ public class MainFragment extends Fragment {
                     mqttManager.publishString("HELLLLLLOOOOOO", topics[2], AWSIotMqttQos.QOS0);
                 } catch (Exception e) {
                     Log.e(LOG_TAG, "Publish error.", e);
+                }
+            }
+        });
+
+        binding.buttonSubscribe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    Log.d(LOG_TAG, "onClick: tu smo");
+                    try {
+                        mqttManager.subscribeToTopic(topics[0], AWSIotMqttQos.QOS0, new_message_callback);
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Subscription error.", e);
+                    }
+                } catch (Exception e) {
+                    Log.e(LOG_TAG, "Subscribe error.", e);
                 }
             }
         });
