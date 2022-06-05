@@ -40,26 +40,51 @@
         android:orientation="vertical"
         android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/received_title"
+        <com.jjoe64.graphview.GraphView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="3"
-            android:gravity="center_vertical"
-            android:text="Messages => "
-            android:layout_margin="20dp"
-            android:textColor="@color/black"
-            android:textSize="26sp" />
+            android:layout_height="150dp"
+            android:layout_margin="10dp"
+            android:id="@+id/temp_graph" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:orientation="vertical"
+        android:layout_height="wrap_content">
+
+        <com.jjoe64.graphview.GraphView
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_margin="10dp"
+            android:id="@+id/moisture_graph" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
         <TextView
-            android:id="@+id/received_messages"
-            android:layout_width="match_parent"
+            android:id="@+id/cooler_status"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_margin="20dp"
+            android:layout_weight="3"
+            android:gravity="center_vertical"
+            android:text="Cooler status: "
+            android:textColor="@color/black"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/cooler_status_message"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="20dp"
             android:layout_weight="5"
             android:gravity="center_vertical"
-            android:layout_margin="20dp"
             android:textColor="@color/black"
-            android:textSize="26sp" />
+            android:textSize="18sp" />
 
     </LinearLayout>
 
@@ -71,21 +96,19 @@
             android:id="@+id/button_publish"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Publish" />
+            android:layout_marginHorizontal="10dp"
+            android:backgroundTint="@color/teal_200"
+            android:text="Cooler status" />
+
+        <Button
+            android:id="@+id/button_subscribe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:backgroundTint="@color/teal_200"
+            android:text="Get readings" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/button_next"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:text="ajde" />
 
-    <Button
-        android:id="@+id/button_subscribe"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:text="pretplata" />
 
 </LinearLayout>
