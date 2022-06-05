@@ -80,6 +80,8 @@ public class MainFragment extends Fragment {
 
     private FragmentMainBinding binding;
 
+    private int toggle = 0;
+
     AWSIotMqttManager mqttManager;
     String clientId;
 
@@ -188,50 +190,7 @@ public class MainFragment extends Fragment {
         // Inflate the layout for this fragment
         binding = FragmentMainBinding.inflate(inflater, container, false);
         binding.getRoot().getRootView().setBackgroundColor(Color.WHITE);
-        //binding.getRoot().getRootView().
 
-        /*binding.tempGraph.getViewport().setScalable(true); // enables horizontal zooming and scrolling
-        binding.tempGraph.getViewport().setScalableY(true); // enables vertical zooming and scrolling
-        binding.tempGraph.getViewport().setYAxisBoundsManual(true); // Prevents auto-rescaling the Y-axis
-        binding.tempGraph.getViewport().setXAxisBoundsManual(true); // Prevents auto-rescaling the X-axis
-        binding.tempGraph.setTitleTextSize(96);*/
-        /*binding.tempGraph.setTitle("Temperature measurements");
-        binding.tempGraph.setTitleColor(Color.BLACK);
-        binding.tempGraph.setTitleTextSize(64);
-        binding.tempGraph.getGridLabelRenderer().setHumanRounding(true);
-        //binding.tempGraph.getGridLabelRenderer().setVerticalAxisTitleTextSize(64);
-
-        binding.tempGraph.getGridLabelRenderer().setVerticalAxisTitle("T[°C]");
-        binding.tempGraph.getGridLabelRenderer().setVerticalLabelsVisible(true);
-        binding.tempGraph.getGridLabelRenderer().setVerticalAxisTitleColor(Color.BLACK);
-
-        binding.tempGraph.getGridLabelRenderer().setGridColor(Color.BLACK);
-        //binding.tempGraph.getGridLabelRenderer().setHorizontalAxisTitleTextSize(64);
-
-        binding.tempGraph.getGridLabelRenderer().setHorizontalAxisTitle("Time [s]");
-        binding.tempGraph.getGridLabelRenderer().setHorizontalLabelsVisible(true);
-        binding.tempGraph.getGridLabelRenderer().setHorizontalAxisTitleColor(Color.BLACK);
-
-        binding.moistureGraph.setTitle("Moisture measurements");
-        binding.moistureGraph.setTitleColor(Color.BLACK);
-        binding.moistureGraph.setTitleTextSize(64);
-        binding.moistureGraph.getGridLabelRenderer().setHumanRounding(true);
-        //binding.tempGraph.getGridLabelRenderer().setVerticalAxisTitleTextSize(64);
-
-        binding.moistureGraph.getGridLabelRenderer().setVerticalAxisTitle("Moisture");
-        binding.moistureGraph.getGridLabelRenderer().setVerticalLabelsVisible(true);
-        binding.moistureGraph.getGridLabelRenderer().setVerticalAxisTitleColor(Color.BLACK);
-
-        binding.moistureGraph.getGridLabelRenderer().setGridColor(Color.BLACK);
-        //binding.tempGraph.getGridLabelRenderer().setHorizontalAxisTitleTextSize(64);
-
-        binding.moistureGraph.getGridLabelRenderer().setHorizontalAxisTitle("Time [s]");
-        binding.moistureGraph.getGridLabelRenderer().setHorizontalLabelsVisible(true);
-        binding.moistureGraph.getGridLabelRenderer().setHorizontalAxisTitleColor(Color.BLACK);
-
-        //binding.tempGraph.addSeries(tmp);
-        //binding.moistureGraph.addSeries(tmp);
-*/
         return binding.getRoot();
         //return inflater.inflate(R.layout.fragment_main, container, false);
     }
@@ -288,7 +247,7 @@ public class MainFragment extends Fragment {
                             //temp_thread.
                             binding.tempGraph.addSeries(temp_series);
 
-                            binding.tempGraph.getViewport().setMinY(10);
+                            binding.tempGraph.getViewport().setMinY(20);
                             binding.tempGraph.getViewport().setMaxY(40);
 
                             binding.tempGraph.getViewport().setYAxisBoundsManual(true);
@@ -334,8 +293,8 @@ public class MainFragment extends Fragment {
                             //temp_thread.
                             binding.moistureGraph.addSeries(moisture_series);
 
-                            binding.moistureGraph.getViewport().setMinY(20);
-                            binding.moistureGraph.getViewport().setMaxY(70);
+                            binding.moistureGraph.getViewport().setMinY(40);
+                            binding.moistureGraph.getViewport().setMaxY(60);
 
                             binding.moistureGraph.getViewport().setYAxisBoundsManual(true);
 
@@ -359,11 +318,29 @@ public class MainFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        binding.buttonPublish.setOnClickListener(new View.OnClickListener() {
+        binding.buttonGetCoolerStatus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 try {
-                    mqttManager.publishString("HELLLLLLOOOOOO", topics[2], AWSIotMqttQos.QOS0);
+                    mqttManager.publishString("Hello", topics[2], AWSIotMqttQos.QOS0);
+                } catch (Exception e) {
+                    Log.e(LOG_TAG, "Publish error.", e);
+                }
+            }
+        });
+
+        binding.buttonToggleCooler.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    if(toggle == 0) {
+                        mqttManager.publishString("\"ON\"", topics[2], AWSIotMqttQos.QOS0);
+                        toggle = 1;
+                    } else if(toggle == 1) {
+                        mqttManager.publishString("\"OFF\"", topics[2], AWSIotMqttQos.QOS0);
+                        toggle = 0;
+                    }
+
                 } catch (Exception e) {
                     Log.e(LOG_TAG, "Publish error.", e);
                 }
